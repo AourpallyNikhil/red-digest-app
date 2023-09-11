@@ -1,0 +1,5 @@
+type RedDigestModel @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  emailAddress: String
+}
+ 
