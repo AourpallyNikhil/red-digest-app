@@ -8,8 +8,62 @@
 import * as React from "react";
 import { getOverrideProps } from "@aws-amplify/ui-react/internal";
 import { Flex, Image, Text, View } from "@aws-amplify/ui-react";
+import { RedDigestModel } from "../models";
+import { schema } from "../models/schema";
+import { createNewUser, getUserByEmail } from "./userUtils";
+import CryptoJS from "crypto-js"; // Import the CryptoJS library
+
 export default function RedDigestHome1(props) {
   const { overrides, ...rest } = props;
+    const [inputText, setInputText] = useState("");
+    const [validationError, setValidationError] = useState("");
+    const [emailExists, setEmailExists] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
+
+      // Function to handle input text changes
+      const handleInputChange = (event) => {
+        setInputText(event.target.value);
+      };
+
+      // Function to validate email format
+      const isValidEmail = (email) => {
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return emailPattern.test(email);
+      };
+
+      // Function to handle the button click event
+      const handleButtonClick = async () => {
+        if (!isValidEmail(inputText)) {
+          setValidationError("Please enter a valid email address.");
+          console.log("Please enter a valid email address.");
+          return;
+        }
+
+        // Check if the email already exists
+        const emailHash = CryptoJS.SHA256(inputText).toString(CryptoJS.enc.Hex);
+        const existingUser = await getUserByEmail(emailHash);
+
+        if (existingUser) {
+           setEmailExists(true);
+           setValidationError("Email already exists");
+           setSuccessMessage("");
+        } else {
+            // Call the createNewUser function with the inputText value
+            createNewUser(inputText) // Remove await
+              .then(() => {
+                // Clear the input field after successful creation
+                setInputText("");
+                setValidationError("");
+                setEmailExists(false);
+                setSuccessMessage("Get ready to shine! We'll update you as we craft our exquisite pieces.")
+                // Optionally, you can perform additional actions or display a success message here
+              })
+              .catch((error) => {
+                console.error("Error creating user:", error);
+              });
+            };
+        }
+
   return (
     <View
       width="1440px"
@@ -238,6 +292,8 @@ export default function RedDigestHome1(props) {
               whiteSpace="pre-wrap"
               children="RedDigest"
               {...getOverrideProps(overrides, "Blush40592355")}
+              value={inputText} // Bind the input value to the state
+              onChange={handleInputChange} // Call the handleInputChange function on input change
             ></Text>
           </Flex>
           <Flex

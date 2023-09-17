@@ -13,6 +13,11 @@ import {
 import { RedDigestModel } from "../models";
 import { schema } from "../models/schema";
 import { Flex, Icon, Image, Text, View } from "@aws-amplify/ui-react";
+import { createNewUser, getUserByEmail } from "./userUtils";
+import CryptoJS from "crypto-js"; // Import the CryptoJS library
+import { useState } from "react";
+import { API, graphqlOperation } from "aws-amplify";
+
 export default function RedDigestNew1(props) {
   const { overrides, ...rest } = props;
   const buttonOnClick = useDataStoreCreateAction({
@@ -20,6 +25,57 @@ export default function RedDigestNew1(props) {
     model: RedDigestModel,
     schema: schema,
   });
+
+      const [inputText, setInputText] = useState("");
+      const [validationError, setValidationError] = useState("");
+      const [emailExists, setEmailExists] = useState(false);
+      const [successMessage, setSuccessMessage] = useState("");
+
+        // Function to handle input text changes
+        const handleInputChange = (event) => {
+          setInputText(event.target.value);
+        };
+
+        // Function to validate email format
+        const isValidEmail = (email) => {
+          const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+          return emailPattern.test(email);
+        };
+
+        // Function to handle the button click event
+        const handleButtonClick = async () => {
+          if (!isValidEmail(inputText)) {
+            setValidationError("Email address is invalid, please enter a valid one.");
+            console.log("Please enter a valid email address.");
+            return;
+          }
+
+          // Check if the email already exists
+          const emailHash = CryptoJS.SHA256(inputText).toString(CryptoJS.enc.Hex);
+          const existingUser = await getUserByEmail(emailHash);
+          console.log(existingUser)
+
+          if (existingUser) {
+             setEmailExists(true);
+             setValidationError("Email already exists, thank you for your interest");
+             setSuccessMessage("");
+          } else {
+              // Call the createNewUser function with the inputText value
+              createNewUser(inputText) // Remove await
+                .then(() => {
+                  // Clear the input field after successful creation
+                  setInputText("");
+                  setValidationError("");
+                  setEmailExists(false);
+                  setSuccessMessage("Thank you for your interest! We'll update you as our app is ready to use.")
+                  // Optionally, you can perform additional actions or display a success message here
+                })
+                .catch((error) => {
+                  console.error("Error creating user:", error);
+                });
+              };
+          }
+
   return (
     <View
       width="1600px"
@@ -465,6 +521,7 @@ export default function RedDigestNew1(props) {
         ></Icon>
       </View>
       <Image
+        src="/Reddigest hero.svg"
         width="606px"
         height="606px"
         display="block"
@@ -557,8 +614,6 @@ export default function RedDigestNew1(props) {
         <Flex
           gap="16px"
           direction="row"
-          width="unset"
-          height="unset"
           justifyContent="flex-start"
           alignItems="flex-start"
           position="absolute"
@@ -600,7 +655,8 @@ export default function RedDigestNew1(props) {
               backgroundColor="rgba(255,255,255,1)"
               {...getOverrideProps(overrides, ".Input")}
             >
-              <Text
+              <input
+                type="text"
                 fontFamily="Inter"
                 fontSize="16px"
                 fontWeight="400"
@@ -610,8 +666,8 @@ export default function RedDigestNew1(props) {
                 display="block"
                 direction="column"
                 justifyContent="unset"
-                width="unset"
-                height="unset"
+                width="220px"
+                height="52px"
                 gap="unset"
                 alignItems="unset"
                 position="absolute"
@@ -619,12 +675,16 @@ export default function RedDigestNew1(props) {
                 left="16px"
                 padding="0px 0px 0px 0px"
                 whiteSpace="pre-wrap"
-                children="Enter Email Address"
+                border="none"
+                outline="none"
+                placeholder="Enter Email Address"
                 {...getOverrideProps(overrides, "Enter Email Address")}
-              ></Text>
+                value={inputText} // Bind the input value to the state
+                onChange={handleInputChange} // Call the handleInputChange function on input change
+              ></input>
             </View>
           </View>
-          <Flex
+          <button
             gap="6px"
             direction="row"
             width="unset"
@@ -637,7 +697,7 @@ export default function RedDigestNew1(props) {
             padding="14px 20px 14px 20px"
             backgroundColor="rgba(237,28,36,1)"
             onClick={() => {
-              buttonOnClick();
+              handleButtonClick();
             }}
             {...getOverrideProps(overrides, "Button")}
           >
@@ -725,8 +785,62 @@ export default function RedDigestNew1(props) {
                 {...getOverrideProps(overrides, "Vector4210290")}
               ></Icon>
             </View>
-          </Flex>
+          </button>
         </Flex>
+        {validationError && (<div
+                                         style={{
+                                           color: "red",
+                                           fontSize: "15px",
+                                           padding: "0px 0px 0px 0px",
+                                           width: "476px",
+                                           height: "auto",
+                                           display: "flex",
+                                           flexDirection: "column",
+                                           alignItems: "left",
+                                           justifyContent: "left",
+                                           position: "absolute",
+                                           top: "350px",
+                                           left: "5px",
+                                         }}
+                                       >
+                                         {validationError}
+                                       </div>)}
+                  {!validationError && emailExists && (<div
+                                                                                       style={{
+                                                                                         color: "red",
+                                                                                         fontSize: "15px",
+                                                                                         padding: "0px 0px 0px 0px",
+                                                                                         width: "476px",
+                                                                                         height: "auto",
+                                                                                         display: "flex",
+                                                                                         flexDirection: "column",
+                                                                                         alignItems: "left",
+                                                                                         justifyContent: "left",
+                                                                                         position: "absolute",
+                                                                                         top: "350px",
+                                                                                         left: "5px",
+                                                                                       }}
+                                                                                     >
+                                                                                       {validationError}
+                                                                                     </div>)}
+                  {!validationError && !emailExists && successMessage && (<div
+                                                                                                          style={{
+                                                                                                            color: "green",
+                                                                                                            fontSize: "15px",
+                                                                                                            padding: "0px 0px 0px 0px",
+                                                                                                            width: "476px",
+                                                                                                            height: "auto",
+                                                                                                            display: "flex",
+                                                                                                            flexDirection: "column",
+                                                                                                            alignItems: "left",
+                                                                                                            justifyContent: "left",
+                                                                                                            position: "absolute",
+                                                                                                            top: "350px",
+                                                                                                            left: "5px",
+                                                                                                          }}
+                                                                                                        >
+                                                                                                          {successMessage}
+                                                                                                        </div>)}
       </View>
     </View>
   );
